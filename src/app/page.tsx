@@ -8,6 +8,8 @@ import Chart from '@/components/Chart';
 import { ResultCard } from '@/components/ResultCard';
 import { getStockData, searchStocks, StockInfo } from '@/lib/yahoo-finance';
 
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const [selectedSymbol, setSelectedSymbol] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('all');
@@ -38,7 +40,7 @@ export default function Home() {
     return sum / period;
   };
 
-  const prices = stockData?.prices.map(p => p.price) || [];
+  const prices = stockData?.prices.map(p => p.close) || [];
   const ma5 = calculateMA(prices, 5);
   const ma20 = calculateMA(prices, 20);
   const ma60 = calculateMA(prices, 60);
@@ -82,7 +84,6 @@ export default function Home() {
               </h2>
               <Selector
                 onSelect={setSelectedSymbol}
-                searchStocks={searchStocks}
               />
             </div>
           </div>

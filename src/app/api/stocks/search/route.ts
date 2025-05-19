@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 interface YahooFinanceQuote {
   symbol: string;
   shortname?: string;
@@ -15,8 +17,8 @@ interface YahooFinanceSearchResult {
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query');
+    const url = new URL(request.url);
+    const query = url.searchParams.get('query');
 
     if (!query) {
       return NextResponse.json(

@@ -23,7 +23,7 @@ interface ChartProps {
 
 export default function Chart({ data, symbol, name }: ChartProps) {
   const dates = data.map(item => item.date);
-  const prices = data.map(item => item.price);
+  const prices = data.map(item => item.close);
   const volumes = data.map(item => item.volume || 0);
 
   const priceChartData = {
