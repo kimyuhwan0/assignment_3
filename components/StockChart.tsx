@@ -349,21 +349,49 @@ export default function StockChart({ symbol }: StockChartProps) {
     try {
       setIsLoading(true)
       const response = await fetch(`/api/stock-data?symbol=${symbol}&period=${selectedPeriod}`)
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch stock data')
+        throw new Error(`Failed to fetch stock data: ${response.status} ${response.statusText}`)
       }
+
       const data = await response.json()
+      
+      // 데이터 유효성 검사
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        throw new Error('Invalid stock data received')
+      }
+
+      // 데이터 형식 검사
+      const isValidData = data.every(item => 
+        typeof item.date === 'string' &&
+        typeof item.price === 'number' &&
+        typeof item.volume === 'number' &&
+        (item.ma5 === null || typeof item.ma5 === 'number') &&
+        (item.ma20 === null || typeof item.ma20 === 'number') &&
+        (item.ma60 === null || typeof item.ma60 === 'number') &&
+        (item.ma120 === null || typeof item.ma120 === 'number')
+      )
+
+      if (!isValidData) {
+        throw new Error('Invalid data format received')
+      }
+
       setStockData(data)
       setPriceChanges(calculatePriceChanges(data))
     } catch (error) {
       console.error('Error fetching stock data:', error)
+      // 에러 상태 설정
+      setStockData([])
+      setPriceChanges(null)
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchStockData()
+    if (symbol) {
+      fetchStockData()
+    }
   }, [symbol, selectedPeriod])
 
   const datasets = [

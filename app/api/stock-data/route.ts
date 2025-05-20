@@ -31,49 +31,61 @@ function calculateMA(prices: number[], period: number): (number | null)[] {
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const symbol = searchParams.get('symbol') || 'AAPL'
-  const period = searchParams.get('period') || '1m'
-
-  let interval: '1d' | '1wk' | '1mo' = '1d'
-  let range = '1mo'
-
-  switch (period) {
-    case '1d':
-      interval = '1d'
-      range = '1d'
-      break
-    case '1w':
-      interval = '1d'
-      range = '5d'
-      break
-    case '1m':
-      interval = '1d'
-      range = '1mo'
-      break
-    case '3m':
-      interval = '1d'
-      range = '3mo'
-      break
-    case '6m':
-      interval = '1d'
-      range = '6mo'
-      break
-    case '1y':
-      interval = '1d'
-      range = '1y'
-      break
-    case '5y':
-      interval = '1wk'
-      range = '5y'
-      break
-    case 'all':
-      interval = '1wk'
-      range = 'max'
-      break
-  }
-
   try {
+    const { searchParams } = new URL(request.url)
+    const symbol = searchParams.get('symbol')
+    const period = searchParams.get('period') || '1m'
+
+    if (!symbol) {
+      return NextResponse.json(
+        { error: 'Symbol is required' },
+        { status: 400 }
+      )
+    }
+
+    let interval: '1d' | '1wk' | '1mo' = '1d'
+    let range = '1mo'
+
+    switch (period) {
+      case '1d':
+        interval = '1d'
+        range = '1d'
+        break
+      case '1w':
+        interval = '1d'
+        range = '5d'
+        break
+      case '1m':
+        interval = '1d'
+        range = '1mo'
+        break
+      case '3m':
+        interval = '1d'
+        range = '3mo'
+        break
+      case '6m':
+        interval = '1d'
+        range = '6mo'
+        break
+      case '1y':
+        interval = '1d'
+        range = '1y'
+        break
+      case '5y':
+        interval = '1wk'
+        range = '5y'
+        break
+      case 'all':
+        interval = '1wk'
+        range = 'max'
+        break
+      default:
+        return NextResponse.json(
+          { error: 'Invalid period' },
+          { status: 400 }
+        )
+    }
+
     // Get historical data with additional days for MA calculation
     const endDate = new Date()
     const startDate = new Date()
@@ -112,6 +124,13 @@ export async function GET(request: Request) {
       period2: endDate,
       interval,
     }) as YahooFinanceQuote[]
+
+    if (!quote || quote.length === 0) {
+      return NextResponse.json(
+        { error: 'No data available for the specified symbol' },
+        { status: 404 }
+      )
+    }
 
     // Process the data
     const prices = quote.map(q => q.close)
@@ -168,6 +187,13 @@ export async function GET(request: Request) {
       new Date(data.date) >= periodStartDate && 
       new Date(data.date) <= endDate
     )
+
+    if (filteredData.length === 0) {
+      return NextResponse.json(
+        { error: 'No data available for the selected period' },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json(filteredData)
   } catch (error) {
