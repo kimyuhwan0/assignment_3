@@ -13,6 +13,7 @@ import {
   Legend,
   ChartOptions,
   ChartData,
+  LineController,
 } from 'chart.js'
 import { Chart } from 'react-chartjs-2'
 
@@ -24,7 +25,8 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  LineController,
 )
 
 interface StockChartProps {
