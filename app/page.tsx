@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import StockSearch from '@/components/StockSearch'
 import StockChart from '@/components/StockChart'
@@ -12,7 +11,6 @@ export default function Home() {
   const searchRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<HTMLDivElement>(null)
   const featuresRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
 
   const smoothScroll = (target: HTMLElement) => {
     const start = window.scrollY
@@ -84,7 +82,11 @@ export default function Home() {
                 </button>
                 <button 
                   className="px-8 py-3 rounded-lg bg-gray-800 text-white font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-                  onClick={() => router.push('/about')}
+                  onClick={() => {
+                    if (featuresRef.current) {
+                      smoothScroll(featuresRef.current)
+                    }
+                  }}
                 >
                   About
                 </button>
@@ -96,7 +98,7 @@ export default function Home() {
         {/* Main Content */}
         <section ref={searchRef} className="py-32">
           <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto space-y-[32rem]">
+            <div className="max-w-6xl mx-auto space-y-[512px]">
               <div className="bg-gray-800/50 rounded-2xl p-8 border border-gray-700/50">
                 <h2 className="text-2xl font-semibold mb-6">Stock Search</h2>
                 <StockSearch onSelect={handleStockSelect} />
