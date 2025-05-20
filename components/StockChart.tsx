@@ -17,6 +17,7 @@ import {
 } from 'chart.js'
 import { Chart } from 'react-chartjs-2'
 
+// Chart.js 등록을 컴포넌트 외부에서 한 번만 실행
 ChartJS.register(
   CategoryScale,
   LinearScale,
