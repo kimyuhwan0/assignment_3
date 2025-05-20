@@ -344,37 +344,25 @@ export default function StockChart({ symbol }: StockChartProps) {
 
   const recommendation = calculateRecommendation(stockData)
 
-  useEffect(() => {
-    const fetchStockData = async () => {
-      try {
-        setIsLoading(true)
-        const response = await fetch(`/api/stock-data?symbol=${symbol}&period=${selectedPeriod}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch stock data')
-        }
-        const data = await response.json()
-        if (!data || !Array.isArray(data) || data.length === 0) {
-          throw new Error('Invalid stock data received')
-        }
-        setStockData(data)
-        
-        // 전체 기간 데이터를 가져와서 가격 변화 계산
-        const fullResponse = await fetch(`/api/stock-data?symbol=${symbol}&period=all`)
-        if (fullResponse.ok) {
-          const fullData = await fullResponse.json()
-          if (fullData && Array.isArray(fullData) && fullData.length > 0) {
-            setPriceChanges(calculatePriceChanges(fullData))
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch stock data:', error)
-        setStockData([])
-        setPriceChanges(null)
-      } finally {
-        setIsLoading(false)
+  // 주식 데이터 가져오기
+  const fetchStockData = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch(`/api/stock-data?symbol=${symbol}&period=${selectedPeriod}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch stock data')
       }
+      const data = await response.json()
+      setStockData(data)
+      setPriceChanges(calculatePriceChanges(data))
+    } catch (error) {
+      console.error('Error fetching stock data:', error)
+    } finally {
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchStockData()
   }, [symbol, selectedPeriod])
 
