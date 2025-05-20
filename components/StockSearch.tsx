@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { useDebounce } from '@/hooks/useDebounce'
-import { useRouter } from 'next/navigation'
 
 interface SearchResult {
   symbol: string
@@ -10,8 +9,11 @@ interface SearchResult {
   exchange: string
 }
 
-export default function StockSearch() {
-  const router = useRouter()
+interface StockSearchProps {
+  onSelect: (symbol: string) => void
+}
+
+export default function StockSearch({ onSelect }: StockSearchProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -45,12 +47,6 @@ export default function StockSearch() {
     handleSearch(debouncedQuery)
   }, [debouncedQuery])
 
-  const handleSelect = (symbol: string) => {
-    setQuery(symbol)
-    setResults([])
-    router.push(`/stock/${symbol}`)
-  }
-
   return (
     <div className="relative">
       <div className="relative">
@@ -74,7 +70,11 @@ export default function StockSearch() {
             <button
               key={result.symbol}
               className="w-full px-4 py-3 text-left hover:bg-gray-700/50 transition-colors first:rounded-t-xl last:rounded-b-xl"
-              onClick={() => handleSelect(result.symbol)}
+              onClick={() => {
+                setQuery(result.symbol)
+                setResults([])
+                onSelect(result.symbol)
+              }}
             >
               <div className="flex justify-between items-center">
                 <div>

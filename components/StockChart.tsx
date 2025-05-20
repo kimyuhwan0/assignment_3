@@ -45,6 +45,7 @@ export default function StockChart({ symbol }: StockChartProps) {
   const [stockData, setStockData] = useState<StockData[]>([])
   const [selectedPeriod, setSelectedPeriod] = useState('1w')
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [hidden, setHidden] = useState([false, false, false, false, false, false])
   const [priceChanges, setPriceChanges] = useState<{
     weekChange: { change: number; percentChange: number } | null;
@@ -346,18 +347,32 @@ export default function StockChart({ symbol }: StockChartProps) {
 
   // 주식 데이터 가져오기
   const fetchStockData = async () => {
+    if (!symbol) {
+      console.warn('StockChart: No symbol provided')
+      setError('Stock symbol is required')
+      return
+    }
+
+    console.log('StockChart: Fetching data for symbol:', symbol)
+    setIsLoading(true)
+    setError(null)
+
     try {
-      setIsLoading(true)
       const response = await fetch(`/api/stock-data?symbol=${symbol}&period=${selectedPeriod}`)
+      console.log('StockChart: API response status:', response.status)
       
       if (!response.ok) {
+        const errorText = await response.text()
+        console.error('StockChart: API error response:', errorText)
         throw new Error(`Failed to fetch stock data: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
+      console.log('StockChart: Received data points:', data.length)
       
       // 데이터 유효성 검사
       if (!data || !Array.isArray(data) || data.length === 0) {
+        console.error('StockChart: Invalid data received - empty or not an array')
         throw new Error('Invalid stock data received')
       }
 
@@ -373,14 +388,16 @@ export default function StockChart({ symbol }: StockChartProps) {
       )
 
       if (!isValidData) {
+        console.error('StockChart: Invalid data format received')
         throw new Error('Invalid data format received')
       }
 
+      console.log('StockChart: Data validation passed')
       setStockData(data)
       setPriceChanges(calculatePriceChanges(data))
     } catch (error) {
-      console.error('Error fetching stock data:', error)
-      // 에러 상태 설정
+      console.error('StockChart: Error fetching stock data:', error)
+      setError(error instanceof Error ? error.message : 'Failed to fetch stock data')
       setStockData([])
       setPriceChanges(null)
     } finally {
@@ -389,6 +406,7 @@ export default function StockChart({ symbol }: StockChartProps) {
   }
 
   useEffect(() => {
+    console.log('StockChart: useEffect triggered with symbol:', symbol)
     if (symbol) {
       fetchStockData()
     }
@@ -604,6 +622,22 @@ export default function StockChart({ symbol }: StockChartProps) {
     )
   }
 
+  if (error) {
+    return (
+      <div className="h-[700px] w-full flex items-center justify-center">
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    )
+  }
+
+  if (!stockData || stockData.length === 0) {
+    return (
+      <div className="h-[700px] w-full flex items-center justify-center">
+        <div className="text-gray-400">No data available</div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end space-x-2">
@@ -714,75 +748,6 @@ export default function StockChart({ symbol }: StockChartProps) {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-      
-      {/* 주가 정보 표시 */}
-      {priceChanges && (
-        <div className="grid grid-cols-4 gap-4 p-4 bg-gray-800/50 rounded-lg">
-          <div className="text-center">
-            <div className="text-sm text-gray-400 mb-1">Current Price</div>
-            <div className="text-xl font-semibold">
-              {new Intl.NumberFormat('ko-KR', {
-                style: 'currency',
-                currency: 'USD'
-              }).format(stockData[stockData.length - 1].price)}
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <div className="text-sm text-gray-400 mb-1">1 week change</div>
-            {priceChanges.weekChange && (
-              <div className={`text-lg font-semibold ${
-                priceChanges.weekChange.change >= 0 ? 'text-red-500' : 'text-blue-500'
-              }`}>
-                {priceChanges.weekChange.change >= 0 ? '+' : ''}
-                {new Intl.NumberFormat('ko-KR', {
-                  style: 'currency',
-                  currency: 'USD'
-                }).format(priceChanges.weekChange.change)}
-                {' '}
-                ({priceChanges.weekChange.percentChange >= 0 ? '+' : ''}
-                {priceChanges.weekChange.percentChange.toFixed(2)}%)
-              </div>
-            )}
-          </div>
-          
-          <div className="text-center">
-            <div className="text-sm text-gray-400 mb-1">1 month change</div>
-            {priceChanges.monthChange && (
-              <div className={`text-lg font-semibold ${
-                priceChanges.monthChange.change >= 0 ? 'text-red-500' : 'text-blue-500'
-              }`}>
-                {priceChanges.monthChange.change >= 0 ? '+' : ''}
-                {new Intl.NumberFormat('ko-KR', {
-                  style: 'currency',
-                  currency: 'USD'
-                }).format(priceChanges.monthChange.change)}
-                {' '}
-                ({priceChanges.monthChange.percentChange >= 0 ? '+' : ''}
-                {priceChanges.monthChange.percentChange.toFixed(2)}%)
-              </div>
-            )}
-          </div>
-          
-          <div className="text-center">
-            <div className="text-sm text-gray-400 mb-1">1 year change</div>
-            {priceChanges.yearChange && (
-              <div className={`text-lg font-semibold ${
-                priceChanges.yearChange.change >= 0 ? 'text-red-500' : 'text-blue-500'
-              }`}>
-                {priceChanges.yearChange.change >= 0 ? '+' : ''}
-                {new Intl.NumberFormat('ko-KR', {
-                  style: 'currency',
-                  currency: 'USD'
-                }).format(priceChanges.yearChange.change)}
-                {' '}
-                ({priceChanges.yearChange.percentChange >= 0 ? '+' : ''}
-                {priceChanges.yearChange.percentChange.toFixed(2)}%)
-              </div>
-            )}
           </div>
         </div>
       )}
