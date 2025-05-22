@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const symbol = searchParams.get('symbol')
-    const period = searchParams.get('period') || '1m'
+    const period = searchParams.get('period') || '1w'
 
     if (!symbol) {
       return NextResponse.json(
@@ -118,84 +118,92 @@ export async function GET(request: Request) {
         break
     }
 
-    // Ensure we have enough data for MA120 calculation
-    const quote = await yahooFinance.historical(symbol, {
-      period1: startDate,
-      period2: endDate,
-      interval,
-    }) as YahooFinanceQuote[]
+    try {
+      // Ensure we have enough data for MA120 calculation
+      const quote = await yahooFinance.historical(symbol, {
+        period1: startDate,
+        period2: endDate,
+        interval,
+      }) as YahooFinanceQuote[]
 
-    if (!quote || quote.length === 0) {
+      if (!quote || quote.length === 0) {
+        return NextResponse.json(
+          { error: 'No data available for the specified symbol' },
+          { status: 404 }
+        )
+      }
+
+      // Process the data
+      const prices = quote.map(q => q.close)
+      const volumes = quote.map(q => q.volume)
+      const dates = quote.map(q => q.date.toISOString().split('T')[0])
+
+      // Calculate moving averages with more data points
+      const ma5 = calculateMA(prices, 5)
+      const ma20 = calculateMA(prices, 20)
+      const ma60 = calculateMA(prices, 60)
+      const ma120 = calculateMA(prices, 120)
+
+      // Combine the data
+      const stockData: StockData[] = dates.map((date: string, i: number) => ({
+        date,
+        price: prices[i],
+        volume: volumes[i],
+        ma5: ma5[i],
+        ma20: ma20[i],
+        ma60: ma60[i],
+        ma120: ma120[i],
+      }))
+
+      // Filter data based on selected period
+      const periodStartDate = new Date()
+      switch (period) {
+        case '1d':
+          periodStartDate.setDate(periodStartDate.getDate() - 1)
+          break
+        case '1w':
+          periodStartDate.setDate(periodStartDate.getDate() - 7)
+          break
+        case '1m':
+          periodStartDate.setMonth(periodStartDate.getMonth() - 1)
+          break
+        case '3m':
+          periodStartDate.setMonth(periodStartDate.getMonth() - 3)
+          break
+        case '6m':
+          periodStartDate.setMonth(periodStartDate.getMonth() - 6)
+          break
+        case '1y':
+          periodStartDate.setFullYear(periodStartDate.getFullYear() - 1)
+          break
+        case '5y':
+          periodStartDate.setFullYear(periodStartDate.getFullYear() - 5)
+          break
+        case 'all':
+          return NextResponse.json(stockData)
+      }
+
+      // Filter the data while preserving MA values
+      const filteredData = stockData.filter(data => 
+        new Date(data.date) >= periodStartDate && 
+        new Date(data.date) <= endDate
+      )
+
+      if (filteredData.length === 0) {
+        return NextResponse.json(
+          { error: 'No data available for the selected period' },
+          { status: 404 }
+        )
+      }
+
+      return NextResponse.json(filteredData)
+    } catch (error) {
+      console.error('Yahoo Finance API error:', error)
       return NextResponse.json(
-        { error: 'No data available for the specified symbol' },
-        { status: 404 }
+        { error: 'Failed to fetch data from Yahoo Finance' },
+        { status: 500 }
       )
     }
-
-    // Process the data
-    const prices = quote.map(q => q.close)
-    const volumes = quote.map(q => q.volume)
-    const dates = quote.map(q => q.date.toISOString().split('T')[0])
-
-    // Calculate moving averages with more data points
-    const ma5 = calculateMA(prices, 5)
-    const ma20 = calculateMA(prices, 20)
-    const ma60 = calculateMA(prices, 60)
-    const ma120 = calculateMA(prices, 120)
-
-    // Combine the data
-    const stockData: StockData[] = dates.map((date: string, i: number) => ({
-      date,
-      price: prices[i],
-      volume: volumes[i],
-      ma5: ma5[i],
-      ma20: ma20[i],
-      ma60: ma60[i],
-      ma120: ma120[i],
-    }))
-
-    // Filter data based on selected period
-    const periodStartDate = new Date()
-    switch (period) {
-      case '1d':
-        periodStartDate.setDate(periodStartDate.getDate() - 1)
-        break
-      case '1w':
-        periodStartDate.setDate(periodStartDate.getDate() - 7)
-        break
-      case '1m':
-        periodStartDate.setMonth(periodStartDate.getMonth() - 1)
-        break
-      case '3m':
-        periodStartDate.setMonth(periodStartDate.getMonth() - 3)
-        break
-      case '6m':
-        periodStartDate.setMonth(periodStartDate.getMonth() - 6)
-        break
-      case '1y':
-        periodStartDate.setFullYear(periodStartDate.getFullYear() - 1)
-        break
-      case '5y':
-        periodStartDate.setFullYear(periodStartDate.getFullYear() - 5)
-        break
-      case 'all':
-        return NextResponse.json(stockData)
-    }
-
-    // Filter the data while preserving MA values
-    const filteredData = stockData.filter(data => 
-      new Date(data.date) >= periodStartDate && 
-      new Date(data.date) <= endDate
-    )
-
-    if (filteredData.length === 0) {
-      return NextResponse.json(
-        { error: 'No data available for the selected period' },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json(filteredData)
   } catch (error) {
     console.error('Failed to fetch stock data:', error)
     return NextResponse.json(

@@ -350,54 +350,22 @@ export default function StockChart({ symbol }: StockChartProps) {
 
   const recommendation = calculateRecommendation(stockData)
 
-  // 주식 데이터 가져오기
   const fetchStockData = async () => {
-    if (!symbol) {
-      console.warn('StockChart: No symbol provided')
-      setError('Stock symbol is required')
-      return
-    }
-
-    console.log('StockChart: Fetching data for symbol:', symbol)
-    setIsLoading(true)
-    setError(null)
-
     try {
+      setIsLoading(true)
+      setError(null)
+      
       const response = await fetch(`/api/stock-data?symbol=${symbol}&period=${selectedPeriod}`)
-      console.log('StockChart: API response status:', response.status)
-      
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('StockChart: API error response:', errorText)
-        throw new Error(`Failed to fetch stock data: ${response.status} ${response.statusText}`)
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch stock data')
       }
-
-      const data = await response.json()
-      console.log('StockChart: Received data points:', data.length)
       
-      // 데이터 유효성 검사
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        console.error('StockChart: Invalid data received - empty or not an array')
-        throw new Error('Invalid stock data received')
+      const data = await response.json()
+      if (!data || data.length === 0) {
+        throw new Error('No data available for the selected period')
       }
-
-      // 데이터 형식 검사
-      const isValidData = data.every(item => 
-        typeof item.date === 'string' &&
-        typeof item.price === 'number' &&
-        typeof item.volume === 'number' &&
-        (item.ma5 === null || typeof item.ma5 === 'number') &&
-        (item.ma20 === null || typeof item.ma20 === 'number') &&
-        (item.ma60 === null || typeof item.ma60 === 'number') &&
-        (item.ma120 === null || typeof item.ma120 === 'number')
-      )
-
-      if (!isValidData) {
-        console.error('StockChart: Invalid data format received')
-        throw new Error('Invalid data format received')
-      }
-
-      console.log('StockChart: Data validation passed')
+      
       setStockData(data)
       setPriceChanges(calculatePriceChanges(data))
     } catch (error) {
@@ -411,7 +379,6 @@ export default function StockChart({ symbol }: StockChartProps) {
   }
 
   useEffect(() => {
-    console.log('StockChart: useEffect triggered with symbol:', symbol)
     if (symbol) {
       fetchStockData()
     }
@@ -646,14 +613,6 @@ export default function StockChart({ symbol }: StockChartProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-end space-x-2">
-        <button
-          className={`px-4 py-2 rounded-lg text-sm ${
-            selectedPeriod === '1d' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
-          }`}
-          onClick={() => setSelectedPeriod('1d')}
-        >
-          1 day
-        </button>
         <button
           className={`px-4 py-2 rounded-lg text-sm ${
             selectedPeriod === '1w' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
